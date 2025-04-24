@@ -1,0 +1,220 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['username'])) {
+    // Redirect to login page if not logged in
+    header("Location: Login.html");
+    exit();
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 80%;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        form {
+            display: inline-block;
+            margin: 5px;
+        }
+
+        input[type="submit"],
+        input[type="text"] {
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        input[type="text"] {
+            width: 200px;
+        }
+
+        .logout {
+            text-decoration: none;
+            color: black;
+            font-size: 20px;
+        }
+
+        .logout-button {
+            padding: 10px 16px;
+            font-size: 16px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .logout-button:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Ticket Management System</h1>
+
+    <?php
+    //Database connection
+    $serverName = "localhost";
+    $userName = "root";
+    $password = "";
+    $dbName = "passenger_info";
+
+    $conn = mysqli_connect($serverName, $userName, $password, $dbName);
+
+    if (!$conn) {
+        die("Connection Error" . mysqli_connect_error());
+    }
+
+    //Buy logic:: if use press then number decrease by 1
+    if (isset($_POST['buy'])) {
+        $name = $_POST['pname'];
+        $count = $_POST['pnum'];
+
+        if ($count > 0) {
+            $count--;
+
+
+            $sql = "UPDATE tickets SET Ticket_Number = '$count' WHERE Name = '$name'";
+            mysqli_query($conn, $sql);
+        } else {
+            # code...
+            echo "<script>alert('Sets are not available!')</script>";
+        }
+    }
+
+    //Serach Logic:: Search by user name 
+    $searchTerm = "";
+    if (isset($_POST["search"])) {
+        $searchTerm = mysqli_real_escape_string($conn, $_POST['serch_term']);
+        $sql1 = "SELECT * FROM TICKETS WHERE NAME LIKE '%$searchTerm%'";
+    } else {
+
+        $sql1 = "SELECT * FROM tickets"; //For Displaying all records
+    }
+    $result = mysqli_query($conn, $sql1);
+    // Search Form with HTML
+    
+    echo "<form method = 'post' style = 'margin-bottom:10px;'>
+<input type = 'text' placeholder = 'Serch by Name' name = 'serch_term' required>
+<input type = 'submit' name = 'search' placeholder = 'Submit'>
+</form>";
+
+    //Extracting data from database with loops
+    if (mysqli_num_rows($result) > 0) {
+        echo "<table border='1' cellpadding='9'>";
+        echo "<tr><th>Photo</th><th>Name</th><th>Total Tickets</th><th colspan='3'>Actions</th></tr>";
+
+        while ($row = mysqli_fetch_assoc($result)) {
+            echo "<tr>";
+            echo "<td><img src='uploads/" . $row['Image'] . "' width='80' height='80' style='object-fit: cover; border-radius: 10px;'></td>";
+
+
+            echo "<td>" . $row['Name'] . "</td>";
+            echo "<td>" . $row['Ticket_Number'] . "</td>";
+
+            //Action buttons like Edit, Delete, Buy
+            echo "<td>
+                <form action = 'editForm.php' method = 'post'>
+                <input type = 'hidden' name = 'pname' value = '" . $row['Name'] . "'/>
+                <input type = 'hidden' name = 'pnum' value = '" . $row['Ticket_Number'] . "'/>
+                <input type = 'hidden' name = 'id' value = '".$row['id']."'/>
+                <input type = 'submit' value = 'Edit'/>
+                </form>
+                </td>
+                      <td>
+        <form action='delete.php' method='post' onsubmit=\"return confirm('Are you sure you want to delete this record?');\">
+            <input type='hidden' name='name' value='" . $row['Name'] . "'/>
+            <input type='hidden' name='ticket_number' value='" . $row['Ticket_Number'] . "'/>
+                            <input type = 'hidden' name = 'id' value = '" . $row['id'] . "'/>
+
+            <input type='submit' value='Delete'/>
+        </form>
+      </td>
+                <td>
+                <form action = '' method = 'post'>
+                <input type='hidden' name='pname' value='" . $row['Name'] . "'/>
+                <input type='hidden' name='pnum' value='" . $row['Ticket_Number'] . "'/>
+                <input type = 'submit' name = 'buy' value = 'Buy'/>
+                </form>
+                </td>";
+        }
+        echo "</table>";
+    } else {
+        echo "<p>No Records found..</p>";
+    }
+    #Add Button Outside table
+    echo "<form action = 'addForm.php' method = 'post'>
+        <input type = 'submit' value = 'Add' style = 'margin-top:10px;'/>
+      </form>";
+
+    // echo "<form action = 'Login.html'>
+//         <input type = 'submit' value = 'Logout' style = 'margin-top:10px;'/>
+// </form>";
+    
+    ?>
+
+    <!-- <a href="logout.php" class = "logout"><input type = "button" value = "Logout"></a> -->
+    <form action="logout.php" method="post" style="display: inline;">
+        <input type="submit" value="Logout" class="logout-button">
+    </form>
+
+    <form action="selectoption.php" method="post" style="display: inline;">
+        <input type="submit" value="Home" class="logout-button">
+    </form>
+</body>
+
+</html>
